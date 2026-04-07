@@ -6,20 +6,16 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
 const host = '0.0.0.0';
 const porta = 3000;
-
 const app = express();
 
-// --- Middlewares ---
 app.use(session({
     secret: 'M1nh4Ch4v3S3cr3t4',
     resave: true,
     saveUninitialized: true,
     cookie: { maxAge: 1000 * 60 * 30 } 
 }));
-
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
@@ -27,12 +23,10 @@ app.use(express.static(__dirname));
 var listaLivros = [];
 var listaLeitores = [];
 
-// --- Função para capturar a data/hora no fuso de Brasília ---
 function obterDataHoraBrasilia() {
     return new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
-// --- Middleware de Autenticação ---
 function estaAutenticado(req, res, next) {
     if (req.session.logado) {
         next();
@@ -51,26 +45,54 @@ function estaAutenticado(req, res, next) {
         `);
     }
 }
-
-// --- Rotas ---
-
 app.get("/login", (req, res) => {
     const ultimoAcesso = req.cookies.ultimoAcesso || "Primeiro acesso no sistema.";
-    
     res.send(`
     <!DOCTYPE html>
     <html lang="pt-br">
     <head>
         <meta charset="utf-8">
-        <title>Login - Biblioteca</title>
+        <title>Login - Biblioteca do Seu Zé</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            body {
+                background-image: url('/bookshelf-at-dunster-house-library.jpg');
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+                position: relative;
+                min-height: 100vh;
+            }
+            body::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 1;
+            }
+            .login-container {
+                position: relative;
+                z-index: 2;
+            }
+            .card {
+                border-radius: 15px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            }
+            .card-header {
+                border-radius: 15px 15px 0 0;
+            }
+        </style>
     </head>
     <body class="bg-light">
-        <div class="container min-vh-100 d-flex justify-content-center align-items-center">
+        <div class="container login-container min-vh-100 d-flex justify-content-center align-items-center">
             <div class="card shadow-lg w-100" style="max-width: 420px;">
                 <div class="card-body text-center">
-                    <img src="/Imagens/loogo.png" alt="Logo" class="img-fluid mb-3" style="max-width: 150px;">
-                    <h2 class="card-title mb-4">Autenticação do Sistema</h2>
+                    <img src="/Logo da Biblioteca do Seu Zé.png" alt="Logo - Biblioteca do Seu Zé" class="img-fluid mb-4" style="max-width: 180px;">
+                    <h2 class="card-title mb-1">Biblioteca do Seu Zé</h2>
+                    <p class="text-muted mb-4">Sistema de Controle de Empréstimos</p>
                     <form action='/login' method='POST'>
                         <div class="mb-3 text-start">
                             <label for="usuario" class="form-label">Usuário</label>
@@ -80,10 +102,10 @@ app.get("/login", (req, res) => {
                             <label for="senha" class="form-label">Senha</label>
                             <input type="password" class="form-control" id="senha" name="senha" value="admin" required>
                         </div>
-                        <button class="btn btn-primary w-100" type="submit">Login</button>
+                        <button class="btn btn-primary w-100" type="submit">🔐 Entrar</button>
                     </form>
                     <div class="mt-4 border-top pt-3">
-                        <small class="text-muted">Último acesso gravado: ${ultimoAcesso}</small>
+                        <small class="text-muted">Último acesso: ${ultimoAcesso}</small>
                     </div>
                 </div>
             </div>
@@ -92,10 +114,8 @@ app.get("/login", (req, res) => {
     </html>
     `);
 });
-
 app.post("/login", (req, res) => {
     const { usuario, senha } = req.body;
-
     if (usuario == 'admin' && senha == 'admin') {
         req.session.logado = true;
         req.session.usuarioNome = usuario;
@@ -106,20 +126,16 @@ app.post("/login", (req, res) => {
             maxAge: 1000 * 60 * 60 * 24, 
             httpOnly: true 
         });
-
         res.redirect("/menu");
     } else {
         res.send("<script>alert('Usuário ou senha inválidos!'); window.location.href='/login';</script>");
     }
 });
-
 app.get('/', estaAutenticado, (req, res) => {
     res.redirect('/menu');
 });
-
 app.get("/menu", estaAutenticado, (req, res) => {
     const ultimoAcesso = req.cookies.ultimoAcesso || "Primeiro acesso";
-    
     res.send(`
     <!DOCTYPE html>
     <html lang="pt-br">
@@ -148,11 +164,9 @@ app.get("/menu", estaAutenticado, (req, res) => {
     </html>
     `);
 });
-
 app.get("/cadastrarLivro", estaAutenticado, (req, res) => {
     gerarFormularioLivro(res);
 });
-
 app.post("/cadastrarLivro", estaAutenticado, (req, res) => {
     const dados = req.body;
     if (dados.titulo && dados.autor && dados.isbn) {
@@ -162,10 +176,8 @@ app.post("/cadastrarLivro", estaAutenticado, (req, res) => {
         gerarFormularioLivro(res, dados, "Todos os campos são obrigatórios");
     }
 });
-
 app.get("/listarLivros", estaAutenticado, (req, res) => {
     const ultimoAcesso = req.cookies.ultimoAcesso || "N/A";
-    
     let html = `
     <!DOCTYPE html>
     <html lang="pt-br">
@@ -196,7 +208,6 @@ app.get("/listarLivros", estaAutenticado, (req, res) => {
                             </tr>
                         </thead>
                         <tbody>`;
-    
     if (listaLivros.length === 0) {
         html += `<tr><td colspan="3" class="text-center text-muted">Nenhum livro cadastrado</td></tr>`;
     } else {
@@ -208,7 +219,6 @@ app.get("/listarLivros", estaAutenticado, (req, res) => {
             </tr>`;
         });
     }
-
     html += `           </tbody>
                     </table>
                     <div class="alert alert-info mt-3 p-2 text-center" style="font-size: 0.9rem;">
@@ -225,15 +235,11 @@ app.get("/listarLivros", estaAutenticado, (req, res) => {
     </html>`;
     res.send(html);
 });
-
 app.get("/cadastrarLeitor", estaAutenticado, (req, res) => {
     gerarFormularioLeitor(res);
 });
-
 app.post("/cadastrarLeitor", estaAutenticado, (req, res) => {
     const dados = req.body;
-    
-    // Validação
     if (!dados.nome || dados.nome.trim() === "") {
         return gerarFormularioLeitor(res, dados, "Nome é obrigatório");
     }
@@ -262,11 +268,9 @@ app.post("/cadastrarLeitor", estaAutenticado, (req, res) => {
         return gerarFormularioLeitor(res, dados, "Selecione um livro para emprestar");
     }
     
-    // Salvar leitor
     listaLeitores.push(dados);
     res.redirect("/sucessoLeitor");
 });
-
 app.get("/sucessoLeitor", estaAutenticado, (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -301,10 +305,8 @@ app.get("/sucessoLeitor", estaAutenticado, (req, res) => {
     </html>
     `);
 });
-
 app.get("/listarLeitores", estaAutenticado, (req, res) => {
     const ultimoAcesso = req.cookies.ultimoAcesso || "N/A";
-    
     let html = `
     <!DOCTYPE html>
     <html lang="pt-br">
@@ -338,7 +340,6 @@ app.get("/listarLeitores", estaAutenticado, (req, res) => {
                             </tr>
                         </thead>
                         <tbody>`;
-    
     if (listaLeitores.length === 0) {
         html += `<tr><td colspan="6" class="text-center text-muted">Nenhum empréstimo registrado</td></tr>`;
     } else {
@@ -353,7 +354,6 @@ app.get("/listarLeitores", estaAutenticado, (req, res) => {
             </tr>`;
         });
     }
-
     html += `           </tbody>
                     </table>
                     <div class="alert alert-info mt-3 p-2 text-center" style="font-size: 0.9rem;">
@@ -370,15 +370,12 @@ app.get("/listarLeitores", estaAutenticado, (req, res) => {
     </html>`;
     res.send(html);
 });
-
 app.get("/logout", (req, res) => {
     req.session.destroy();
     res.redirect("/login");
 });
-
 function gerarFormularioLivro(res, dados = {}, erro = "") {
     const alertaErro = erro ? `<div class="alert alert-danger alert-dismissible fade show" role="alert">${erro}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>` : '';
-    
     res.send(`
     <!DOCTYPE html>
     <html lang="pt-br">
@@ -484,8 +481,6 @@ function gerarFormularioLeitor(res, dados = {}, erro = "") {
     </body>
     </html>`);
 }
-
-
 app.listen(porta, host, () => {
     console.log(`Servidor rodando em http://${host}:${porta}`);
 });
