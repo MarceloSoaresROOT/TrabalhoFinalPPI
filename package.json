@@ -1,5 +1,5 @@
 {
-  "name": "biblioteca",
+  "name": "trabalho-final-ppi",
   "version": "1.0.0",
   "description": "Sistema de controle de biblioteca",
   "main": "app.js",
@@ -11,5 +11,20 @@
     "express": "^5.2.1",
     "express-session": "^1.17.3",
     "cookie-parser": "^1.4.6"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarceloSoaresROOT/TrabalhoFinalPPI.git"
+  },
+  "keywords": [
+    "node",
+    "express"
+  ],
+  "author": "Marcelo Henrique",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MarceloSoaresROOT/TrabalhoFinalPPI/issues"
+  },
+  "homepage": "https://github.com/MarceloSoaresROOT/TrabalhoFinalPPI#readme"
 }
