@@ -96,7 +96,7 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
     const { usuario, senha } = req.body;
 
-    if (usuario == 'admin' || senha == 'admin') {
+    if (usuario == 'admin' && senha == 'admin') {
         req.session.logado = true;
         req.session.usuarioNome = usuario;
 
@@ -109,7 +109,7 @@ app.post("/login", (req, res) => {
 
         res.redirect("/menu");
     } else {
-        res.send("<script>alert('Inválido!'); window.location.href='/login';</script>");
+        res.send("<script>alert('Usuário ou senha inválidos!'); window.location.href='/login';</script>");
     }
 });
 
@@ -132,13 +132,15 @@ app.get("/menu", estaAutenticado, (req, res) => {
         <div class="container mt-5">
             <div class="card shadow mx-auto" style="max-width: 600px;">
                 <div class="card-header bg-primary text-white text-center">
-                    <h3>Menu do Sistema</h3>
+                    <h3 class="mb-0">📚 Menu do Sistema</h3>
                 </div>
                 <div class="card-body text-center">
-                    <p>Último acesso: ${ultimoAcesso}</p>
-                    <a href="/cadastrarLivro" class="btn btn-success btn-lg mb-3 w-100">Cadastro de Livros</a>
-                    <a href="/cadastrarLeitor" class="btn btn-info btn-lg mb-3 w-100">Cadastro de Leitores</a>
-                    <a href="/logout" class="btn btn-danger btn-lg w-100">Logout</a>
+                    <p class="text-muted">Último acesso: <strong>${ultimoAcesso}</strong></p>
+                    <div class="d-grid gap-2">
+                        <a href="/cadastrarLivro" class="btn btn-success btn-lg">📖 Cadastro de Livros</a>
+                        <a href="/cadastrarLeitor" class="btn btn-info btn-lg">👤 Cadastro de Leitores</a>
+                        <a href="/logout" class="btn btn-danger btn-lg">🚪 Logout</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -153,11 +155,11 @@ app.get("/cadastrarLivro", estaAutenticado, (req, res) => {
 
 app.post("/cadastrarLivro", estaAutenticado, (req, res) => {
     const dados = req.body;
-    if (dados.titulo || dados.autor || dados.isbn) {
+    if (dados.titulo && dados.autor && dados.isbn) {
         listaLivros.push(dados);
         res.redirect("/listarLivros");
     } else {
-        gerarFormularioLivro(res, dados);
+        gerarFormularioLivro(res, dados, "Todos os campos são obrigatórios");
     }
 });
 
@@ -165,6 +167,7 @@ app.get("/listarLivros", estaAutenticado, (req, res) => {
     const ultimoAcesso = req.cookies.ultimoAcesso || "N/A";
     
     let html = `
+    <!DOCTYPE html>
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
@@ -174,37 +177,45 @@ app.get("/listarLivros", estaAutenticado, (req, res) => {
     <body class="bg-light">
         <nav class="navbar navbar-dark bg-primary mb-4 shadow">
             <div class="container-fluid">
-                <span class="navbar-brand">Biblioteca</span>
+                <span class="navbar-brand">📚 Biblioteca</span>
                 <a href="/logout" class="btn btn-outline-light btn-sm">Sair</a>
             </div>
         </nav>
         <div class="container">
             <div class="card shadow">
                 <div class="card-header bg-primary text-white text-center">
-                    <h5 class="mb-0">Lista de Livros</h5>
+                    <h5 class="mb-0">Lista de Livros Cadastrados</h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-striped">
                         <thead class="table-dark">
                             <tr>
-                                <th>Título</th><th>Autor</th><th>ISBN</th>
+                                <th>Título</th>
+                                <th>Autor</th>
+                                <th>ISBN</th>
                             </tr>
                         </thead>
                         <tbody>`;
     
-    listaLivros.forEach(l => {
-        html += `<tr>
-            <td>${l.titulo}</td><td>${l.autor}</td><td>${l.isbn}</td>
-        </tr>`;
-    });
+    if (listaLivros.length === 0) {
+        html += `<tr><td colspan="3" class="text-center text-muted">Nenhum livro cadastrado</td></tr>`;
+    } else {
+        listaLivros.forEach(livro => {
+            html += `<tr>
+                <td>${livro.titulo}</td>
+                <td>${livro.autor}</td>
+                <td>${livro.isbn}</td>
+            </tr>`;
+        });
+    }
 
     html += `           </tbody>
                     </table>
                     <div class="alert alert-info mt-3 p-2 text-center" style="font-size: 0.9rem;">
-                        Usuário: <strong>${req.session.usuarioNome}</strong> | Último acesso ao sistema: ${ultimoAcesso}
+                        Usuário: <strong>${req.session.usuarioNome}</strong> | Último acesso: ${ultimoAcesso}
                     </div>
-                    <div class="d-flex justify-content-between mt-3">
-                        <a href="/cadastrarLivro" class="btn btn-success">Cadastrar Novo Livro</a>
+                    <div class="d-flex justify-content-between mt-3 gap-2">
+                        <a href="/cadastrarLivro" class="btn btn-success">➕ Novo Livro</a>
                         <a href="/menu" class="btn btn-secondary">Menu</a>
                     </div>
                 </div>
@@ -221,58 +232,135 @@ app.get("/cadastrarLeitor", estaAutenticado, (req, res) => {
 
 app.post("/cadastrarLeitor", estaAutenticado, (req, res) => {
     const dados = req.body;
-    if (dados.nome && dados.cpf && dados.telefone && dados.dataEmprestimo && dados.dataDevolucao && dados.livroSelecionado) {
-        listaLeitores.push(dados);
-        res.redirect("/listarLeitores");
-    } else {
-        gerarFormularioLeitor(res, dados);
+    
+    // Validação
+    if (!dados.nome || dados.nome.trim() === "") {
+        return gerarFormularioLeitor(res, dados, "Nome é obrigatório");
     }
+    
+    if (!dados.cpf || dados.cpf.trim() === "") {
+        return gerarFormularioLeitor(res, dados, "CPF é obrigatório");
+    }
+    
+    if (!dados.telefone || dados.telefone.trim() === "") {
+        return gerarFormularioLeitor(res, dados, "Telefone é obrigatório");
+    }
+    
+    if (!dados.dataEmprestimo || dados.dataEmprestimo === "") {
+        return gerarFormularioLeitor(res, dados, "Data de Empréstimo é obrigatória");
+    }
+    
+    if (!dados.dataDevolucao || dados.dataDevolucao === "") {
+        return gerarFormularioLeitor(res, dados, "Data de Devolução é obrigatória");
+    }
+    
+    if (listaLivros.length === 0) {
+        return gerarFormularioLeitor(res, dados, "Cadastre um livro antes de emprestar");
+    }
+    
+    if (!dados.livro || dados.livro === "") {
+        return gerarFormularioLeitor(res, dados, "Selecione um livro para emprestar");
+    }
+    
+    // Salvar leitor
+    listaLeitores.push(dados);
+    res.redirect("/sucessoLeitor");
+});
+
+app.get("/sucessoLeitor", estaAutenticado, (req, res) => {
+    res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+        <title>Sucesso</title>
+    </head>
+    <body class="bg-light">
+        <div class="container mt-5">
+            <div class="card shadow mx-auto" style="max-width: 600px; border: none;">
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <svg class="text-success" style="width: 80px; height: 80px;" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-success mb-3">Livro Emprestado com Sucesso!</h2>
+                    <p class="text-muted mb-1">O leitor foi cadastrado e o livro foi atribuído.</p>
+                    <p class="text-muted small">Redirecionando para a lista de leitores...</p>
+                </div>
+            </div>
+        </div>
+        <script>
+            setTimeout(() => {
+                window.location.href = "/listarLeitores";
+            }, 3000);
+        </script>
+    </body>
+    </html>
+    `);
 });
 
 app.get("/listarLeitores", estaAutenticado, (req, res) => {
     const ultimoAcesso = req.cookies.ultimoAcesso || "N/A";
     
     let html = `
+    <!DOCTYPE html>
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
-        <title>Leitores Cadastrados</title>
+        <title>Leitores com Empréstimos</title>
     </head>
     <body class="bg-light">
         <nav class="navbar navbar-dark bg-primary mb-4 shadow">
             <div class="container-fluid">
-                <span class="navbar-brand">Biblioteca</span>
+                <span class="navbar-brand">📚 Biblioteca</span>
                 <a href="/logout" class="btn btn-outline-light btn-sm">Sair</a>
             </div>
         </nav>
         <div class="container">
             <div class="card shadow">
                 <div class="card-header bg-primary text-white text-center">
-                    <h5 class="mb-0">Lista de Leitores</h5>
+                    <h5 class="mb-0">Leitores com Livros Emprestados</h5>
                 </div>
                 <div class="card-body">
                     <table class="table table-striped">
                         <thead class="table-dark">
                             <tr>
-                                <th>Nome</th><th>CPF</th><th>Telefone</th><th>Data Empréstimo</th><th>Data Devolução</th><th>Livro</th>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Telefone</th>
+                                <th>Livro</th>
+                                <th>Empréstimo</th>
+                                <th>Devolução</th>
                             </tr>
                         </thead>
                         <tbody>`;
     
-    listaLeitores.forEach(l => {
-        html += `<tr>
-            <td>${l.nome}</td><td>${l.cpf}</td><td>${l.telefone}</td><td>${l.dataEmprestimo}</td><td>${l.dataDevolucao}</td><td>${l.livro}</td>
-        </tr>`;
-    });
+    if (listaLeitores.length === 0) {
+        html += `<tr><td colspan="6" class="text-center text-muted">Nenhum empréstimo registrado</td></tr>`;
+    } else {
+        listaLeitores.forEach(leitor => {
+            html += `<tr>
+                <td>${leitor.nome}</td>
+                <td>${leitor.cpf}</td>
+                <td>${leitor.telefone}</td>
+                <td>${leitor.livro}</td>
+                <td>${leitor.dataEmprestimo}</td>
+                <td>${leitor.dataDevolucao}</td>
+            </tr>`;
+        });
+    }
 
     html += `           </tbody>
                     </table>
                     <div class="alert alert-info mt-3 p-2 text-center" style="font-size: 0.9rem;">
-                        Usuário: <strong>${req.session.usuarioNome}</strong> | Último acesso ao sistema: ${ultimoAcesso}
+                        Usuário: <strong>${req.session.usuarioNome}</strong> | Último acesso: ${ultimoAcesso}
                     </div>
-                    <div class="d-flex justify-content-between mt-3">
-                        <a href="/cadastrarLeitor" class="btn btn-success">Cadastrar Novo Leitor</a>
+                    <div class="d-flex justify-content-between mt-3 gap-2">
+                        <a href="/cadastrarLeitor" class="btn btn-success">➕ Novo Empréstimo</a>
                         <a href="/menu" class="btn btn-secondary">Menu</a>
                     </div>
                 </div>
@@ -288,8 +376,11 @@ app.get("/logout", (req, res) => {
     res.redirect("/login");
 });
 
-function gerarFormularioLivro(res, dados = {}) {
+function gerarFormularioLivro(res, dados = {}, erro = "") {
+    const alertaErro = erro ? `<div class="alert alert-danger alert-dismissible fade show" role="alert">${erro}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>` : '';
+    
     res.send(`
+    <!DOCTYPE html>
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
@@ -299,12 +390,24 @@ function gerarFormularioLivro(res, dados = {}) {
     <body class="bg-light">
         <div class="container mt-5">
             <div class="card shadow mx-auto" style="max-width: 800px;">
-                <div class="card-header bg-primary text-white text-center"><h3>Cadastro de Livro</h3></div>
+                <div class="card-header bg-primary text-white text-center">
+                    <h3 class="mb-0">Cadastro de Livro</h3>
+                </div>
                 <div class="card-body">
+                    ${alertaErro}
                     <form method="POST" action="/cadastrarLivro" class="row g-3">
-                        <div class="col-md-6"><label class="form-label">Título</label><input type="text" name="titulo" class="form-control" value="${dados.titulo || ''}" required></div>
-                        <div class="col-md-6"><label class="form-label">Autor</label><input type="text" name="autor" class="form-control" value="${dados.autor || ''}" required></div>
-                        <div class="col-md-12"><label class="form-label">ISBN</label><input type="text" name="isbn" class="form-control" value="${dados.isbn || ''}" required></div>
+                        <div class="col-md-12">
+                            <label class="form-label">Título</label>
+                            <input type="text" name="titulo" class="form-control" value="${dados.titulo || ''}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Autor</label>
+                            <input type="text" name="autor" class="form-control" value="${dados.autor || ''}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">ISBN</label>
+                            <input type="text" name="isbn" class="form-control" value="${dados.isbn || ''}" required>
+                        </div>
                         <div class="col-12 text-center mt-4">
                             <button type="submit" class="btn btn-primary px-5">Cadastrar</button>
                             <a href="/listarLivros" class="btn btn-outline-secondary ms-2">Ver Lista</a>
@@ -317,9 +420,18 @@ function gerarFormularioLivro(res, dados = {}) {
     </html>`);
 }
 
-function gerarFormularioLeitor(res, dados = {}) {
-    let options = listaLivros.map(l => `<option value="${l.titulo}">${l.titulo}</option>`).join('');
+function gerarFormularioLeitor(res, dados = {}, erro = "") {
+    let options = '<option value="">Selecione um livro</option>';
+    if (listaLivros.length > 0) {
+        options += listaLivros.map(livro => 
+            `<option value="${livro.titulo}" ${dados.livro === livro.titulo ? 'selected' : ''}>${livro.titulo}</option>`
+        ).join('');
+    }
+    
+    const alertaErro = erro ? `<div class="alert alert-danger alert-dismissible fade show" role="alert">${erro}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>` : '';
+    
     res.send(`
+    <!DOCTYPE html>
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
@@ -329,17 +441,40 @@ function gerarFormularioLeitor(res, dados = {}) {
     <body class="bg-light">
         <div class="container mt-5">
             <div class="card shadow mx-auto" style="max-width: 800px;">
-                <div class="card-header bg-primary text-white text-center"><h3>Cadastro de Leitor</h3></div>
+                <div class="card-header bg-primary text-white text-center">
+                    <h3 class="mb-0">Cadastro de Leitor e Empréstimo de Livro</h3>
+                </div>
                 <div class="card-body">
+                    ${alertaErro}
                     <form method="POST" action="/cadastrarLeitor" class="row g-3">
-                        <div class="col-md-6"><label class="form-label">Nome</label><input type="text" name="nome" class="form-control" value="${dados.nome || ''}" required></div>
-                        <div class="col-md-6"><label class="form-label">CPF</label><input type="text" name="cpf" class="form-control" value="${dados.cpf || ''}" required></div>
-                        <div class="col-md-6"><label class="form-label">Telefone</label><input type="text" name="telefone" class="form-control" value="${dados.telefone || ''}" required></div>
-                        <div class="col-md-6"><label class="form-label">Data Empréstimo</label><input type="date" name="dataEmprestimo" class="form-control" value="${dados.dataEmprestimo || ''}" required></div>
-                        <div class="col-md-6"><label class="form-label">Data Devolução</label><input type="date" name="dataDevolucao" class="form-control" value="${dados.dataDevolucao || ''}" required></div>
-                        <div class="col-md-6"><label class="form-label">Livro</label><select name="livro" class="form-control" required><option value="">Selecione um livro</option>${options}</select></div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nome</label>
+                            <input type="text" name="nome" class="form-control" value="${dados.nome || ''}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">CPF</label>
+                            <input type="text" name="cpf" class="form-control" value="${dados.cpf || ''}" placeholder="000.000.000-00" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Telefone</label>
+                            <input type="text" name="telefone" class="form-control" value="${dados.telefone || ''}" placeholder="(00) 00000-0000" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Livro para Emprestar</label>
+                            <select name="livro" class="form-control" required>
+                                ${options}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Data do Empréstimo</label>
+                            <input type="date" name="dataEmprestimo" class="form-control" value="${dados.dataEmprestimo || ''}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Data de Devolução</label>
+                            <input type="date" name="dataDevolucao" class="form-control" value="${dados.dataDevolucao || ''}" required>
+                        </div>
                         <div class="col-12 text-center mt-4">
-                            <button type="submit" class="btn btn-primary px-5">Cadastrar</button>
+                            <button type="submit" class="btn btn-success px-5">Emprestar Livro</button>
                             <a href="/listarLeitores" class="btn btn-outline-secondary ms-2">Ver Lista</a>
                         </div>
                     </form>
@@ -349,6 +484,7 @@ function gerarFormularioLeitor(res, dados = {}) {
     </body>
     </html>`);
 }
+
 
 app.listen(porta, host, () => {
     console.log(`Servidor rodando em http://${host}:${porta}`);
