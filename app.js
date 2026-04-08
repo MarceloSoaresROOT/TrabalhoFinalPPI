@@ -56,7 +56,7 @@ app.get("/login", (req, res) => {
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>
             body {
-                background-image: url('/bookshelf-at-dunster-house-library.jpg');
+                background-image: url('/bookshelf.jpg');
                 background-size: cover;
                 background-position: center;
                 background-attachment: fixed;
@@ -90,7 +90,7 @@ app.get("/login", (req, res) => {
         <div class="container login-container min-vh-100 d-flex justify-content-center align-items-center">
             <div class="card shadow-lg w-100" style="max-width: 420px;">
                 <div class="card-body text-center">
-                    <img src="/Logo da Biblioteca do Seu Zé.png" alt="Logo - Biblioteca do Seu Zé" class="img-fluid mb-4" style="max-width: 180px;">
+                    <img src="/logo-biblioteca.png" alt="Logo - Biblioteca do Seu Zé" class="img-fluid mb-4" style="max-width: 180px;">
                     <h2 class="card-title mb-1">Biblioteca do Seu Zé</h2>
                     <p class="text-muted mb-4">Sistema de Controle de Empréstimos</p>
                     <form action='/login' method='POST'>
