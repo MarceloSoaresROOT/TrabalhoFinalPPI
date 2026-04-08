@@ -63,6 +63,7 @@ app.get("/login", (req, res) => {
                 background-attachment: fixed;
                 position: relative;
                 min-height: 100vh;
+
             }
             body::before {
                 content: '';
@@ -120,8 +121,6 @@ app.post("/login", (req, res) => {
     if (usuario == 'admin' && senha == 'admin') {
         req.session.logado = true;
         req.session.usuarioNome = usuario;
-
-        // CORREÇÃO DO HORÁRIO: Forçando fuso de Brasília (pt-BR + America/Sao_Paulo)
         const agora = obterDataHoraBrasilia();
         res.cookie("ultimoAcesso", agora, { 
             maxAge: 1000 * 60 * 60 * 24, 
@@ -425,9 +424,7 @@ function gerarFormularioLeitor(res, dados = {}, erro = "") {
             `<option value="${livro.titulo}" ${dados.livro === livro.titulo ? 'selected' : ''}>${livro.titulo}</option>`
         ).join('');
     }
-    
     const alertaErro = erro ? `<div class="alert alert-danger alert-dismissible fade show" role="alert">${erro}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>` : '';
-    
     res.send(`
     <!DOCTYPE html>
     <html lang="pt-br">
