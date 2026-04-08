@@ -3,6 +3,7 @@ import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,7 +19,7 @@ app.use(session({
 }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
 
 var listaLivros = [];
 var listaLeitores = [];
